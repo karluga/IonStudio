@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+:root {
+  --accent: 59 130 246;
+  /* Default electric blue */
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #0a0a0a;
+  color: #e5e5e5;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Simulation specific styles */
+.charge-progress {
+  transition: width 0.3s ease-out;
+}
+
+.electron-flow {
+  animation: flow 1.5s linear infinite;
+}
+
+@keyframes flow {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(400%);
+  }
+}
