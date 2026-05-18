@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --accent: 59 130 246;
-  /* Default electric blue */
+  --color-1: 68 238 159;
+  --color-2: 68 232 238;
+  --color-3: 68 147 238;
+  --color-4: 238 68 147;
+  --color-5: 238 159 68;
 }
 
 body {
@@ -11,27 +14,49 @@ body {
   color: #e5e5e5;
 }
 
+/* Glassmorphism cards */
 .glass {
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Simulation specific styles */
-.charge-progress {
-  transition: width 0.3s ease-out;
+/* Accent utilities using your palette */
+.text-accent {
+  color: rgb(var(--color-2));
 }
 
+.bg-accent {
+  background-color: rgb(var(--color-2));
+}
+
+.border-accent {
+  border-color: rgb(var(--color-2));
+}
+
+.charge-progress {
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(90deg,
+      rgb(var(--color-2)),
+      rgb(var(--color-1)));
+}
+
+/* Simulation animations */
 .electron-flow {
-  animation: flow 1.5s linear infinite;
+  animation: flow 1.2s linear infinite;
 }
 
 @keyframes flow {
   0% {
-    transform: translateX(-100%);
+    transform: translateX(-150%);
   }
 
   100% {
-    transform: translateX(400%);
+    transform: translateX(500%);
   }
+}
+
+/* Battery level glow */
+.battery-glow {
+  box-shadow: 0 0 25px rgb(var(--color-2) / 0.6);
 }
