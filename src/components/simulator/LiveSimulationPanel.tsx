@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Battery, SimulationState } from '../../types';
+import type { Battery, SimulationState, SimulationSnapshot } from '../../types';
 
 interface LiveSimulationPanelProps {
   selectedBattery: Battery | null;
@@ -7,6 +7,16 @@ interface LiveSimulationPanelProps {
   isCharging: boolean;
   speedMultiplier: number;
   onSimulationUpdate: (state: SimulationState) => void;
+  onRunComplete: (snapshots: SimulationSnapshot[], meta: RunMeta) => void;
+}
+
+export interface RunMeta {
+  batteryName: string;
+  amps: number;
+  cRate: number;
+  peakTemp: number;
+  totalTimeMin: number;
+  finalSoc: number;
 }
 
 export default function LiveSimulationPanel({
@@ -14,7 +24,8 @@ export default function LiveSimulationPanel({
   currentAmps,
   isCharging,
   speedMultiplier,
-  onSimulationUpdate
+  onSimulationUpdate,
+  onRunComplete,
 }: LiveSimulationPanelProps) {
   const [simulation, setSimulation] = useState<SimulationState>({
     isCharging: false,
@@ -25,32 +36,38 @@ export default function LiveSimulationPanel({
     temperature: 25,
   });
 
+  // Accumulate snapshots for the current run
+  const [snapshots, setSnapshots] = useState<SimulationSnapshot[]>([]);
+  const [peakTemp, setPeakTemp] = useState(25);
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
     if (isCharging && selectedBattery) {
-      // Fixed physics tick rate (every 600ms real time)
       interval = setInterval(() => {
         setSimulation(prev => {
-          // === PHYSICS CALCULATION (independent of speed) ===
           const cRate = currentAmps / selectedBattery.capacityAh;
-          const isTooFast = cRate > selectedBattery.recommendedAmps / selectedBattery.capacityAh * 1.5;
+          const isTooFast = cRate > (selectedBattery.recommendedAmps / selectedBattery.capacityAh) * 1.5;
 
-          // SOC increase per tick (based on real current)
-          const socPerTick = (currentAmps / selectedBattery.capacityAh) * 0.85; // ~realistic efficiency
+          // SOC
+          const socPerTick = (currentAmps / selectedBattery.capacityAh) * 0.85 * speedMultiplier;
           const newSoc = Math.min(100, prev.soc + socPerTick);
 
           const progress = newSoc / 100;
 
-          // Temperature rise - purely based on physical stress
-          const tempRisePerTick = isTooFast ? 1.9 : 0.65;
-          let newTemp = prev.temperature + tempRisePerTick;
-          if (newTemp > 58) newTemp = 58;
+          // Joule's Law heat: Q ∝ I² × R × t
+          const resistance = selectedBattery.internalResistanceOhm ?? 0.025;
+          const tickSeconds = 0.6; // real seconds per tick
+          const joulHeat = Math.pow(currentAmps, 2) * resistance * tickSeconds * speedMultiplier;
+          // Scale to a sensible °C rise (normalize by capacity so big packs heat slower)
+          const heatRise = (joulHeat / selectedBattery.capacityAh) * 1.8;
+          // Passive cooling toward ambient (25°C)
+          const ambientTemp = 25;
+          const cooling = 0.08 * (prev.temperature - ambientTemp);
+          const newTemp = Math.min(85, prev.temperature + heatRise - cooling);
 
           const newVoltage = selectedBattery.nominalVoltage * (0.88 + progress * 0.29);
-
-          // === TIME ADVANCEMENT (this is affected by speed multiplier) ===
-          const realTimeAdvancedMin = 0.6; // each tick = 0.6 real minutes of charging
+          const timeAdvanced = 0.6 * speedMultiplier; // minutes
 
           const finalState: SimulationState = {
             ...prev,
@@ -58,15 +75,54 @@ export default function LiveSimulationPanel({
             currentAmps,
             voltage: Number(newVoltage.toFixed(2)),
             soc: Number(newSoc.toFixed(1)),
-            timeElapsedMin: prev.timeElapsedMin + (realTimeAdvancedMin * speedMultiplier),
+            timeElapsedMin: Number((prev.timeElapsedMin + timeAdvanced).toFixed(1)),
             temperature: Number(newTemp.toFixed(1)),
           };
+
+          // Record snapshot
+          const snap: SimulationSnapshot = {
+            timeMin: finalState.timeElapsedMin,
+            soc: finalState.soc,
+            voltage: finalState.voltage,
+            temperature: finalState.temperature,
+            amps: currentAmps,
+          };
+          setSnapshots(s => [...s, snap]);
+          setPeakTemp(p => Math.max(p, finalState.temperature));
+
+          // Auto-stop at full charge
+          if (newSoc >= 100) {
+            onRunComplete(
+              [...snapshots, snap],
+              {
+                batteryName: selectedBattery.name,
+                amps: currentAmps,
+                cRate: Number(cRate.toFixed(2)),
+                peakTemp: Math.max(peakTemp, finalState.temperature),
+                totalTimeMin: Number(finalState.timeElapsedMin.toFixed(1)),
+                finalSoc: 100,
+              }
+            );
+          }
 
           onSimulationUpdate(finalState);
           return finalState;
         });
       }, 600);
     } else if (!isCharging) {
+      // If we had a partial run with data, save it
+      if (snapshots.length > 2 && selectedBattery) {
+        const cRate = currentAmps / selectedBattery.capacityAh;
+        onRunComplete(snapshots, {
+          batteryName: selectedBattery.name,
+          amps: currentAmps,
+          cRate: Number(cRate.toFixed(2)),
+          peakTemp,
+          totalTimeMin: Number(simulation.timeElapsedMin.toFixed(1)),
+          finalSoc: simulation.soc,
+        });
+      }
+
       const resetState: SimulationState = {
         isCharging: false,
         currentAmps: 0,
@@ -76,13 +132,13 @@ export default function LiveSimulationPanel({
         temperature: 25,
       };
       setSimulation(resetState);
+      setSnapshots([]);
+      setPeakTemp(25);
       onSimulationUpdate(resetState);
     }
 
     return () => { if (interval) clearInterval(interval); };
-  }, [isCharging, currentAmps, speedMultiplier, selectedBattery, onSimulationUpdate]);
-
-  // ... (rest of the UI stays exactly the same as previous version)
+  }, [isCharging, currentAmps, speedMultiplier, selectedBattery]);
 
   if (!selectedBattery) {
     return (
@@ -111,8 +167,8 @@ export default function LiveSimulationPanel({
             <span className="font-mono font-medium">{simulation.soc}%</span>
           </div>
           <div className="h-5 bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className="charge-progress h-full rounded-full"
+            <div
+              className="charge-progress h-full rounded-full transition-all duration-500"
               style={{ width: `${simulation.soc}%` }}
             />
           </div>
@@ -143,7 +199,7 @@ export default function LiveSimulationPanel({
           <div className="bg-red-500/10 border border-red-500/40 p-5 rounded-xl">
             <p className="text-red-400 font-medium">⚠️ Charging too fast!</p>
             <p className="text-sm mt-1 text-red-400/90">
-              High current is causing rapid temperature rise. 
+              High current is causing rapid temperature rise.
               This is like filling a water tank with a fire hose — it generates too much heat and can permanently damage the battery.
             </p>
           </div>

@@ -1,22 +1,15 @@
 export interface Battery {
   id: string;
   name: string;
-  chemistry: 'LiPo' | 'LiIon' | 'LiFePO4' | 'NiMH';
-  cells: number;           // 1S, 3S, 4S etc.
+  chemistry: string;
+  cells: number;
   capacityAh: number;
   nominalVoltage: number;
-  maxChargeC: number;      // e.g. 1 for 1C, 2 for 2C
+  maxChargeC: number;
   maxChargeAmps: number;
   recommendedAmps: number;
+  internalResistanceOhm: number;
   description: string;
-}
-
-export interface Charger {
-  id: string;
-  name: string;
-  maxPowerW: number;
-  maxAmps: number;
-  supportsBalancing: boolean;
 }
 
 export interface SimulationState {
@@ -26,4 +19,12 @@ export interface SimulationState {
   soc: number;           // State of Charge 0-100
   timeElapsedMin: number;
   temperature: number;
+}
+
+export interface SimulationSnapshot {
+  timeMin: number;
+  soc: number;
+  voltage: number;
+  temperature: number;
+  amps: number;
 }

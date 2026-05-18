@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import VirtualCharger from './components/simulator/VirtualCharger';
+import LearnBasics from './components/learn/LearnBasics';
+import LearnThermal from './components/learn/LearnThermal';
+
+type AppTab = 'home' | 'simulator' | 'calculator' | 'learn';
+type LearnTab = 'basics' | 'thermal';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'home' | 'simulator' | 'calculator' | 'learn'>('simulator');
+  const [activeTab, setActiveTab] = useState<AppTab>('simulator');
+  const [learnTab, setLearnTab] = useState<LearnTab>('basics');
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -30,10 +36,32 @@ function App() {
               Calculator
             </NavButton>
             <NavButton active={activeTab === 'learn'} onClick={() => setActiveTab('learn')}>
-              Learn Basics
+              Learn
             </NavButton>
           </div>
         </div>
+
+        {/* Learn Sub-Navbar — only visible when on the learn tab */}
+        {activeTab === 'learn' && (
+          <div className="border-t border-white/5 bg-black/40">
+            <div className="max-w-7xl mx-auto px-6 py-2 flex gap-1">
+              <SubNavButton
+                active={learnTab === 'basics'}
+                onClick={() => setLearnTab('basics')}
+                icon="⚡"
+              >
+                Core Basics
+              </SubNavButton>
+              <SubNavButton
+                active={learnTab === 'thermal'}
+                onClick={() => setLearnTab('thermal')}
+                icon="🔥"
+              >
+                Thermal Physics
+              </SubNavButton>
+            </div>
+          </div>
+        )}
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
@@ -57,9 +85,13 @@ function App() {
         )}
 
         {activeTab === 'learn' && (
-          <div className="glass p-12 rounded-3xl text-center">
-            <h2 className="text-4xl font-bold mb-4">Learn the Basics</h2>
-            <p className="text-gray-400">Educational modules about voltage, amps, C-rate, and battery chemistry coming soon</p>
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-10">
+              <h1 className="text-5xl font-bold mb-4">Learn Battery Basics</h1>
+              <p className="text-xl text-gray-400">Master the physics behind safe battery charging</p>
+            </div>
+            {learnTab === 'basics' && <LearnBasics />}
+            {learnTab === 'thermal' && <LearnThermal />}
           </div>
         )}
       </main>
@@ -73,21 +105,41 @@ function App() {
   );
 }
 
-// Small reusable component
-function NavButton({ children, active, onClick }: { 
-  children: React.ReactNode; 
-  active: boolean; 
+function NavButton({ children, active, onClick }: {
+  children: React.ReactNode;
+  active: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
       className={`px-6 py-2.5 rounded-xl transition-all font-medium ${
-        active 
-          ? 'bg-accent text-black' 
+        active
+          ? 'bg-accent text-black'
           : 'hover:bg-white/10'
       }`}
     >
+      {children}
+    </button>
+  );
+}
+
+function SubNavButton({ children, active, onClick, icon }: {
+  children: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+  icon: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-5 py-1.5 rounded-lg transition-all text-sm font-medium ${
+        active
+          ? 'bg-white/15 text-white'
+          : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+      }`}
+    >
+      <span>{icon}</span>
       {children}
     </button>
   );
