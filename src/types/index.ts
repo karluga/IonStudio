@@ -16,9 +16,13 @@ export interface SimulationState {
   isCharging: boolean;
   currentAmps: number;
   voltage: number;
-  soc: number;           // State of Charge 0-100
+  soc: number;           // Charge 0-100
   timeElapsedMin: number;
   temperature: number;
+  capacityHealthPercent: number;
+  fireRiskPercent: number;
+  isDead: boolean;
+  isOnFire: boolean;
 }
 
 export interface SimulationSnapshot {
@@ -27,4 +31,6 @@ export interface SimulationSnapshot {
   voltage: number;
   temperature: number;
   amps: number;
+  capacityHealthPercent: number;
+  fireRiskPercent: number;
 }
