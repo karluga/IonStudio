@@ -9,6 +9,7 @@ export interface Battery {
   maxChargeAmps: number;
   recommendedAmps: number;
   internalResistanceOhm: number;
+  expectedCycleLife: number;
   description: string;
 }
 

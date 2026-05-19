@@ -12,6 +12,7 @@ export const batteries: Battery[] = [
     maxChargeAmps: 2.0,
     recommendedAmps: 1.0,
     internalResistanceOhm: 0.035,
+    expectedCycleLife: 300,
     description: "Small single-cell battery used in tiny whoop drones and small gadgets"
   },
   {
@@ -25,6 +26,7 @@ export const batteries: Battery[] = [
     maxChargeAmps: 4.4,
     recommendedAmps: 2.2,
     internalResistanceOhm: 0.025,
+    expectedCycleLife: 350,
     description: "Very popular for RC planes, quadcopters, and beginner FPV drones"
   },
   {
@@ -38,6 +40,7 @@ export const batteries: Battery[] = [
     maxChargeAmps: 10.0,
     recommendedAmps: 5.0,
     internalResistanceOhm: 0.012,
+    expectedCycleLife: 400,
     description: "High-capacity battery for RC cars, large drones, and FPV racing"
   },
   {
@@ -51,6 +54,7 @@ export const batteries: Battery[] = [
     maxChargeAmps: 2.6,
     recommendedAmps: 1.3,
     internalResistanceOhm: 0.045,
+    expectedCycleLife: 300,
     description: "High voltage battery for long-range FPV drones and cinematic rigs"
   },
   {
@@ -64,7 +68,22 @@ export const batteries: Battery[] = [
     maxChargeAmps: 8.0,
     recommendedAmps: 4.0,
     internalResistanceOhm: 0.018,
+    expectedCycleLife: 450,
     description: "High-power battery for large industrial drones and heavy-lift applications"
+  },
+  {
+    id: "phone-liion-polymer-5000",
+    name: "Premium Phone Li-ion Polymer 5000mAh",
+    chemistry: "LiIon",
+    cells: 1,
+    capacityAh: 5.0,
+    nominalVoltage: 3.85,
+    maxChargeC: 0.8,
+    maxChargeAmps: 4.0,
+    recommendedAmps: 2.0,
+    internalResistanceOhm: 0.032,
+    expectedCycleLife: 1200,
+    description: "High-quality smartphone pouch cell designed for hundreds to thousands of controlled cycles"
   },
   {
     id: "liion-21700-5000",
@@ -77,6 +96,7 @@ export const batteries: Battery[] = [
     maxChargeAmps: 2.5,
     recommendedAmps: 2.0,
     internalResistanceOhm: 0.020,
+    expectedCycleLife: 700,
     description: "Common in power banks, flashlights, and e-bikes (safer than LiPo)"
   },
   {
@@ -90,6 +110,7 @@ export const batteries: Battery[] = [
     maxChargeAmps: 50,
     recommendedAmps: 20,
     internalResistanceOhm: 0.003,
+    expectedCycleLife: 2500,
     description: "Large battery commonly used in solar energy storage, off-grid systems, and electric vehicles"
   },
   {
@@ -103,6 +124,7 @@ export const batteries: Battery[] = [
     maxChargeAmps: 1.0,
     recommendedAmps: 0.5,
     internalResistanceOhm: 0.080,
+    expectedCycleLife: 500,
     description: "Older technology still used in some RC cars and transmitters"
   },
 ];

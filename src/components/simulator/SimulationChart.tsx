@@ -56,7 +56,7 @@ function getCycleLabel(run: SimRun) {
   const time = Number.isNaN(date.getTime())
     ? ''
     : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  return `Cycle #${run.meta.cycleNumber}${time ? ` · ${time}` : ''}`;
+  return `Cycle #${run.meta.cycleNumber}${time ? ` • ${time}` : ''}`;
 }
 
 function RunBadge({ run, isCurrent }: { run: SimRun; isCurrent: boolean }) {
@@ -295,7 +295,7 @@ export default function SimulationChart({
             </ResponsiveContainer>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Complete a cycle or run a scripted lifetime test to build health history.</p>
+          <p className="text-sm text-gray-500">Complete a cycle to build health history.</p>
         )}
       </div>
     </div>

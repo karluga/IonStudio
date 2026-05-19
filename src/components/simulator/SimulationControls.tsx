@@ -1,5 +1,3 @@
-export type HealthScenarioId = 'full-100' | 'balanced-20-80' | 'low-amps' | 'risk-amps';
-
 interface SimulationControlsProps {
   currentAmps: number;
   isCharging: boolean;
@@ -11,34 +9,10 @@ interface SimulationControlsProps {
   onToggleCharging: () => void;
   onNewCycle: () => void;
   onReset: () => void;
-  onScenario: (scenario: HealthScenarioId) => void;
   maxRecommendedAmps: number;
   absoluteMaxAmps: number;
   disabled?: boolean;
 }
-
-const HEALTH_SCENARIOS: Array<{ id: HealthScenarioId; title: string; description: string }> = [
-  {
-    id: 'full-100',
-    title: 'Always 100%',
-    description: 'Charges to full every cycle so the chart shows faster capacity fade from high-voltage stress.',
-  },
-  {
-    id: 'balanced-20-80',
-    title: '20-80%',
-    description: 'Keeps each cycle in the gentler middle band, showing slower aging and lower heat risk.',
-  },
-  {
-    id: 'low-amps',
-    title: 'Lower amps',
-    description: 'Uses half the recommended current, showing cooler cycles and reduced resistance growth.',
-  },
-  {
-    id: 'risk-amps',
-    title: '2x amps risk',
-    description: 'Uses twice the recommended current, showing heat, damage, death, or fire risk over time.',
-  },
-];
 
 export default function SimulationControls({
   currentAmps,
@@ -51,7 +25,6 @@ export default function SimulationControls({
   onToggleCharging,
   onNewCycle,
   onReset,
-  onScenario,
   maxRecommendedAmps,
   absoluteMaxAmps,
   disabled = false,
@@ -148,22 +121,9 @@ export default function SimulationControls({
         </button>
       </div>
 
-      <div className="mt-7 border-t border-white/10 pt-5">
-        <h4 className="text-sm font-semibold text-gray-200 mb-3">Scripted Lifetime Tests</h4>
-        <div className="space-y-3">
-          {HEALTH_SCENARIOS.map((scenario) => (
-            <div key={scenario.id}>
-              <button
-                onClick={() => onScenario(scenario.id)}
-                className="w-full rounded-lg bg-white/8 hover:bg-white/12 border border-white/10 px-3 py-2 text-sm font-semibold text-left"
-              >
-                {scenario.title}
-              </button>
-              <p className="text-xs text-gray-500 mt-1 leading-relaxed">{scenario.description}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <p className="text-xs text-gray-500 mt-5 text-center">
+        Heat follows I^2 x R, so current changes affect temperature faster than they affect charge.
+      </p>
     </div>
   );
 }

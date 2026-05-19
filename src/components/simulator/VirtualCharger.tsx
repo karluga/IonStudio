@@ -3,8 +3,9 @@ import type { Battery, SimulationState, SimulationSnapshot } from '../../types';
 import { batteries } from '../../data/batteries';
 
 import BatterySelector from './BatterySelector';
+import ChargeCycleScenariosModal from './ChargeCycleScenariosModal';
 import LiveSimulationPanel from './LiveSimulationPanel';
-import SimulationControls, { type HealthScenarioId } from './SimulationControls';
+import SimulationControls from './SimulationControls';
 import SimulationChart, { type BatteryHealthPoint, type SimRun } from './SimulationChart';
 import type { RunMeta } from './LiveSimulationPanel';
 
@@ -77,51 +78,6 @@ function estimateCycleDamage(args: {
   return Math.max(0.04, chargeStress + ampStress + heatStress + ambientStress + lowAmpRelief);
 }
 
-function createScriptedHistory(battery: Battery, scenario: HealthScenarioId): BatteryHealthPoint[] {
-  const points: BatteryHealthPoint[] = [];
-  let health = 100;
-  let fireRisk = 0;
-
-  for (let cycle = 1; cycle <= 180; cycle += 1) {
-    const profile = {
-      'full-100': { finalCharge: 100, amps: battery.recommendedAmps, peakBase: 39, damage: 0.34 },
-      'balanced-20-80': { finalCharge: 80, amps: battery.recommendedAmps * 0.9, peakBase: 33, damage: 0.095 },
-      'low-amps': { finalCharge: 100, amps: battery.recommendedAmps * 0.5, peakBase: 31, damage: 0.18 },
-      'risk-amps': { finalCharge: 100, amps: battery.recommendedAmps * 2, peakBase: 52, damage: 0.82 },
-    }[scenario];
-
-    const resistanceGrowth = (100 - health) * battery.internalResistanceOhm * 18;
-    const peakTemp = profile.peakBase + resistanceGrowth + (scenario === 'risk-amps' ? cycle * 0.06 : 0);
-    const voltageStress = profile.finalCharge === 100 ? 0.08 : 0;
-    const heatStress = Math.max(0, peakTemp - 40) * 0.018;
-    const ampStress = Math.max(0, profile.amps / battery.recommendedAmps - 1) * 0.16;
-
-    health = Math.max(0, health - profile.damage - voltageStress - heatStress - ampStress);
-    fireRisk = Math.min(100, Math.max(0, fireRisk + Math.max(0, peakTemp - 48) * 0.18 + ampStress * 5 - 0.12));
-
-    const label =
-      peakTemp > 78 || fireRisk > 92
-        ? 'fire'
-        : health <= 55
-          ? 'dead'
-          : profile.finalCharge === 80
-            ? '20-80'
-            : 'full';
-
-    points.push({
-      cycle,
-      capacityHealthPercent: Number(health.toFixed(1)),
-      peakTemp: Number(peakTemp.toFixed(1)),
-      fireRiskPercent: Number(fireRisk.toFixed(1)),
-      label,
-    });
-
-    if (label === 'fire' || label === 'dead') break;
-  }
-
-  return points;
-}
-
 function loadStoredHistory(): StoredHistory {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -138,7 +94,7 @@ export default function VirtualCharger() {
   const [ambientTemp, setAmbientTemp] = useState(25);
   const [isCharging, setIsCharging] = useState(false);
   const [historyByBattery, setHistoryByBattery] = useState<StoredHistory>(() => loadStoredHistory());
-  const [scriptedHealth, setScriptedHealth] = useState<BatteryHealthPoint[]>([]);
+  const [scenarioBattery, setScenarioBattery] = useState<Battery | null>(null);
   const [simulationState, setSimulationState] = useState<SimulationState>(() =>
     createInitialState(batteries[0] ?? null, 25)
   );
@@ -150,10 +106,7 @@ export default function VirtualCharger() {
     [historyByBattery, selectedBattery]
   );
 
-  const healthHistory = useMemo(
-    () => scriptedHealth.length > 0 ? scriptedHealth : runHistory.map(buildHealthPoint).reverse(),
-    [runHistory, scriptedHealth]
-  );
+  const healthHistory = useMemo(() => runHistory.map(buildHealthPoint).reverse(), [runHistory]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(historyByBattery));
@@ -205,7 +158,6 @@ export default function VirtualCharger() {
     setLiveSnapshots([]);
     setIsCharging(false);
     setSimulationState(createInitialState(selectedBattery, ambientTemp, nextHealth));
-    setScriptedHealth([]);
     window.setTimeout(() => {
       completingRef.current = false;
     }, 0);
@@ -264,14 +216,12 @@ export default function VirtualCharger() {
     setCurrentAmps(battery.recommendedAmps);
     setIsCharging(false);
     setLiveSnapshots([]);
-    setScriptedHealth([]);
     setSimulationState(createInitialState(battery, ambientTemp, getLatestHealth(historyByBattery[battery.id] ?? [])));
   };
 
   const toggleCharging = () => {
     if (!selectedBattery || simulationState.isDead || simulationState.isOnFire) return;
     setIsCharging(prev => !prev);
-    setScriptedHealth([]);
   };
 
   const resetLiveCycle = () => {
@@ -297,20 +247,12 @@ export default function VirtualCharger() {
       delete next[selectedBattery.id];
       return next;
     });
-    setScriptedHealth([]);
     setSimulationState(createInitialState(selectedBattery, ambientTemp));
-  };
-
-  const runScenario = (scenario: HealthScenarioId) => {
-    if (!selectedBattery) return;
-    setIsCharging(false);
-    setLiveSnapshots([]);
-    setScriptedHealth(createScriptedHistory(selectedBattery, scenario));
   };
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <h1 className="text-5xl font-bold mb-3 bg-gradient-to-r from-cyan-400 to-emerald-400 bg-clip-text text-transparent">
           IonStudio Virtual Charger
         </h1>
@@ -322,6 +264,7 @@ export default function VirtualCharger() {
           <BatterySelector
             selectedBattery={selectedBattery}
             onSelect={handleBatterySelect}
+            onOpenScenarios={setScenarioBattery}
           />
         </div>
 
@@ -347,7 +290,6 @@ export default function VirtualCharger() {
             onToggleCharging={toggleCharging}
             onNewCycle={startNewCycle}
             onReset={resetLiveCycle}
-            onScenario={runScenario}
             maxRecommendedAmps={selectedBattery?.recommendedAmps || 2}
             absoluteMaxAmps={selectedBattery?.maxChargeAmps || 5}
             disabled={!selectedBattery || simulationState.isDead || simulationState.isOnFire}
@@ -363,6 +305,13 @@ export default function VirtualCharger() {
         selectedBatteryName={selectedBattery?.name ?? ''}
         onClearHistory={clearBatteryHistory}
       />
+
+      {scenarioBattery && (
+        <ChargeCycleScenariosModal
+          battery={scenarioBattery}
+          onClose={() => setScenarioBattery(null)}
+        />
+      )}
     </div>
   );
 }
